@@ -79,8 +79,9 @@ if __name__ == '__main__':
 
     split_ratio = 0.05
     sss = ShuffleSplit(n_splits=1, test_size=split_ratio, random_state=0)
-    df = pd.read_csv('data_6_remove_dup_train.csv')
+    df = pd.read_csv('OpenSubData/data_6_train.csv')
     X, y, tag = df['source'], df['target'], df['tag']
+    print(df['tag'])
     # temp_up = 10000
     # X = X[:temp_up]
     # y = y[:temp_up]

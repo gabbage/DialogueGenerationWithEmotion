@@ -89,10 +89,10 @@ if __name__ == '__main__':
         os.makedirs('OpenSubData')
 
     import urllib.request, tarfile
-    url = 'https://nlp.stanford.edu/data/OpenSubData.tar'
-    urllib.request.urlretrieve(url, 'OpenSubData/OpenSubData.tar')
-    url2 = 'https://raw.githubusercontent.com/jiweil/Neural-Dialogue-Generation/master/data/movie_25000'
-    urllib.request.urlretrieve(url2, 'OpenSubData/movie_25000')
+    # url = 'https://nlp.stanford.edu/data/OpenSubData.tar'
+    # urllib.request.urlretrieve(url, 'OpenSubData/OpenSubData.tar')
+    # url2 = 'https://raw.githubusercontent.com/jiweil/Neural-Dialogue-Generation/master/data/movie_25000'
+    # urllib.request.urlretrieve(url2, 'OpenSubData/movie_25000')
 
     tar = tarfile.open('OpenSubData/OpenSubData.tar')
     tar.extractall()
