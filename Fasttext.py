@@ -3,12 +3,13 @@ import numpy as np
 import pickle
 
 class FasttextLoader:
-    def __init__(self, ftext_filename, word2id):
+    def __init__(self, ftext_filename, word2id, initrange):
         self.vocab = dict()
         fin = io.open(ftext_filename, 'r', encoding='utf-8', newline='\n', errors='ignore')
         _, self.emb_dim = map(int, fin.readline().split())
         self.vocab_size = len(word2id)
-        self.emb_weights = np.zeros((self.vocab_size, self.emb_dim))
+        np.random.seed(42)
+        self.emb_weights = np.random.uniform(-initrange, initrange, (self.vocab_size, self.emb_dim))
 
         for line in fin:
             tokens = line.rstrip().split(' ')
@@ -27,7 +28,13 @@ class FasttextLoader:
 if __name__ == "__main__":
     f = open('OpenSubData/word_dict.pkl', 'br')
     (word2id, id2word) = pickle.load(f)
-    print(word2id['hello'], type(word2id['hello']))
-    print(type(word2id))
-    ftextLoader = FasttextLoader('data/crawl-300d-2M.vec', word2id)
-    print(ftextLoader.get_embedding_weights())
+    ftextLoader = FasttextLoader('data/crawl-300d-2M.vec', word2id, 0.1)
+
+    zero_count = 0
+    check = np.ones(ftextLoader.emb_dim)
+    emb_w = ftextLoader.get_embedding_weights()
+    for x in emb_w:
+        if check.dot(x) == 0.0:
+            zero_count += 1
+
+    print("Zero Elements in weights: {} / {}".format(zero_count, len(emb_w)))
