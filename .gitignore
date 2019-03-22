@@ -1,3 +1,5 @@
 OpenSubData/*
 data/*
 *__pycache__*
+*.ckpt
+*.pkl
