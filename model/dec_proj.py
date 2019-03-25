@@ -166,6 +166,9 @@ class Seq2SeqAttentionSharedEmbedding(nn.Module):
         )
         self.decoder2vocab = nn.Embedding(NUM_EMO + 1, trg_hidden_dim*vocab_size)
 
+        # Device configuration
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         self.init_weights()
 
     def init_weights(self):
@@ -192,7 +195,7 @@ class Seq2SeqAttentionSharedEmbedding(nn.Module):
             self.src_hidden_dim
         ), requires_grad=False)
 
-        return h0_encoder.cuda(), c0_encoder.cuda()
+        return h0_encoder.to(self.device), c0_encoder.to(self.device)
 
     def forward(self, input_src, input_trg, tag, trg_mask=None, ctx_mask=None):
         """Propogate input through the network."""
@@ -245,22 +248,26 @@ class Seq2SeqAttentionSharedEmbedding(nn.Module):
         )
         return word_probs
 
-    def load_word_embedding(self, id2word):
-        import pickle
-        emb = np.zeros((self.vocab_size, self.emb_dim))
-        with open('feature/fasttextModel', 'br') as f:
-            model = pickle.load(f)
-        embed_dict = model.vocab
+    def load_word_embedding(self, word2id):
+        from data.fasttext import FasttextLoader
+        ftextLoader = FasttextLoader('data/crawl-300d-2M.vec', word2id, 0.1)
+        self.embedding.weight = nn.Parameter(torch.FloatTensor(
+            ftextLoader.get_embedding_weights()))
+        # import pickle
+        # emb = np.zeros((self.vocab_size, self.emb_dim))
+        # with open('feature/fasttextModel', 'br') as f:
+            # model = pickle.load(f)
+        # embed_dict = model.vocab
 
-        for idx in range(self.vocab_size):
-            word = id2word[idx]
-            if word in embed_dict:
-                vec = model.syn0[embed_dict[word].index]
-                emb[idx] = vec
-            else:
-                if word == '<pad>':
-                    emb[idx] = np.zeros([self.emb_dim])
-                else:
-                    emb[idx] = np.random.uniform(-1, 1, self.emb_dim)
-        self.embedding.weight = nn.Parameter(torch.FloatTensor(emb))
+        # for idx in range(self.vocab_size):
+            # word = id2word[idx]
+            # if word in embed_dict:
+                # vec = model.syn0[embed_dict[word].index]
+                # emb[idx] = vec
+            # else:
+                # if word == '<pad>':
+                    # emb[idx] = np.zeros([self.emb_dim])
+                # else:
+                    # emb[idx] = np.random.uniform(-1, 1, self.emb_dim)
+
         # self.word_embedding.weight.requires_grad = False

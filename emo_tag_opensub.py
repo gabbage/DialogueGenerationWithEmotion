@@ -72,13 +72,16 @@ df = pd.read_csv(args.filename, index_col=0)
 ds = DatasetOSBtargets(df['target'], pad_len, word2id)
 dl = DataLoader(ds, batch_size)
 df['tag'] = NUM_EMOS
+print(len(df.index))
 
 confidence_values = []
 confidence_threshold = 23.45
 
+small_df_size = 100
+
 for i, trg in enumerate(dl, 0):
-    # if i > 100:
-        # break
+    if i > small_df_size:
+        break
     try:
         outputs = model(trg)
         _, predicted = torch.max(outputs.data, 1)
@@ -96,5 +99,5 @@ for i, trg in enumerate(dl, 0):
         sys.exit()
 
     # df.set_value(i,'tag', predicted.numpy()[0])
-df.to_csv(filename+"_tagged"+file_extension)
+df[:small_df_size].to_csv(filename+"_tagged_small"+file_extension)
 # print(df)

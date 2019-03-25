@@ -18,6 +18,7 @@ class FasttextLoader:
                 word_vec = np.array(list(map(float, tokens[1:])))
                 self.vocab[word] = word2id[word]
                 self.emb_weights[word2id[word]] = word_vec
+        self.emb_weights[word2id['<pad>']] = np.zeros([self.emb_dim])
 
     def get_embedding_weights(self):
         return self.emb_weights

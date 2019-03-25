@@ -247,25 +247,29 @@ class PersonaSeq2SeqAttentionSharedEmbedding(nn.Module):
         )
         return word_probs
 
-    def load_word_embedding(self, id2word):
-        import pickle
-        emb = np.zeros((self.vocab_size, self.emb_dim))
-        with open('feature/fasttextModel', 'br') as f:
-            model = pickle.load(f)
-        embed_dict = model.vocab
+    def load_word_embedding(self, word2id):
+        from data.fasttext import FasttextLoader
+        ftextLoader = FasttextLoader('data/crawl-300d-2M.vec', word2id, 0.1)
+        self.embedding.weight = nn.Parameter(torch.FloatTensor(
+            ftextLoader.get_embedding_weights()))
+        # import pickle
+        # emb = np.zeros((self.vocab_size, self.emb_dim))
+        # with open('feature/fasttextModel', 'br') as f:
+            # model = pickle.load(f)
+        # embed_dict = model.vocab
 
-        for idx in range(self.vocab_size):
-            word = id2word[idx]
-            if word in embed_dict:
-                vec = model.syn0[embed_dict[word].index]
-                emb[idx] = vec
-            else:
-                if word == '<pad>':
-                    emb[idx] = np.zeros([self.emb_dim])
-                else:
-                    emb[idx] = np.random.uniform(-1, 1, self.emb_dim)
-        self.embedding.weight = nn.Parameter(torch.FloatTensor(emb))
-        # self.word_embedding.weight.requires_grad = False
+        # for idx in range(self.vocab_size):
+            # word = id2word[idx]
+            # if word in embed_dict:
+                # vec = model.syn0[embed_dict[word].index]
+                # emb[idx] = vec
+            # else:
+                # if word == '<pad>':
+                    # emb[idx] = np.zeros([self.emb_dim])
+                # else:
+                    # emb[idx] = np.random.uniform(-1, 1, self.emb_dim)
+        # self.embedding.weight = nn.Parameter(torch.FloatTensor(emb))
+        # # self.word_embedding.weight.requires_grad = False
 
 
 

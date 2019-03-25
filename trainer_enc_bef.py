@@ -35,14 +35,14 @@ class EmotionDataLoaderFoo(Dataset):
 
     def __getitem__(self, idx):
         # for src add <s> ahead
-        src = [self.word2id[x] for x in self.source[idx].split()]
+        src = [int(x) for x in self.source[idx].split()]
         if len(src) > self.pad_len - 1:
             src = src[:self.pad_len - 1]
         tag = self.word2id['<' + str(self.tag[idx]) + '>']
         src = [tag] + src + [self.pad_int] * (self.pad_len - len(src) - 1)
 
         # for trg add <s> ahead and </s> end
-        trg = [self.word2id[x] for x in self.target[idx].split()]
+        trg = [int(x) for x in self.target[idx].split()]
         if len(trg) > self.pad_len - 2:
             trg = trg[:self.pad_len - 2]
         trg = [self.start_int] + trg + [self.eos_int] + [self.pad_int] * (self.pad_len - len(trg) - 2)
@@ -101,6 +101,8 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_set, batch_size=batch_size)
     # loader = iter(train_loader)
     # next(loader)
+    # Device configuration
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model = Seq2SeqAttentionSharedEmbedding(
         emb_dim=emb_dim,
@@ -118,7 +120,7 @@ if __name__ == '__main__':
         dropout=0.,
     )
     model.load_word_embedding(id2word)
-    model.cuda()
+    model.to(device)
 
     # model_path = 'checkpoint/new_simple_foo_epoch_9.model'
     # model.load_state_dict(torch.load(
@@ -126,25 +128,25 @@ if __name__ == '__main__':
     # ))
 
 
-    weight_mask = torch.ones(vocab_size).cuda()
+    weight_mask = torch.ones(vocab_size).to(device)
     weight_mask[word2id['<pad>']] = 0
-    loss_criterion = nn.CrossEntropyLoss(weight=weight_mask).cuda()
+    loss_criterion = nn.CrossEntropyLoss(weight=weight_mask).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
-    es = EarlyStop(2)
+    es = EarlyStopping()
     for epoch in range(100):
         print('Training on epoch=%d -------------------------' % (epoch))
         train_loss_sum = 0
         for i, (src, trg) in tqdm(enumerate(train_loader), total=int(len(training_set)/batch_size)):
             # print('i=%d: ' % (i))
-            decoder_logit = model(Variable(src).cuda(), Variable(trg).cuda())
+            decoder_logit = model(Variable(src).to(device), Variable(trg).to(device))
             optimizer.zero_grad()
             trg = torch.cat((torch.index_select(trg, 1, torch.LongTensor(list(range(1, pad_len)))),
                              torch.LongTensor(np.zeros([trg.shape[0], 1]))), dim=1)
             loss = loss_criterion(
                 decoder_logit.contiguous().view(-1, vocab_size),
-                Variable(trg).view(-1).cuda()
+                Variable(trg).view(-1).to(device)
             )
-            train_loss_sum += loss.data[0]
+            train_loss_sum += loss.item()
             loss.backward()
             optimizer.step()
             del loss, decoder_logit
@@ -154,22 +156,23 @@ if __name__ == '__main__':
         # Evaluate
         test_loss_sum = 0
         print("Evaluating:")
-        for i, (src_test, trg_test) in tqdm(enumerate(test_loader), total=int(len(test_set)/batch_size)):
+        with torch.no_grad():
+            for i, (src_test, trg_test) in tqdm(enumerate(test_loader), total=int(len(test_set)/batch_size)):
 
-            test_logit = model(Variable(src_test, volatile=True).cuda(),
-                               Variable(trg_test, volatile=True).cuda())
-            trg_test = torch.cat((torch.index_select(trg_test, 1, torch.LongTensor(list(range(1, pad_len)))),
-                             torch.LongTensor(np.zeros([trg_test.shape[0], 1]))), dim=1)
-            test_loss = loss_criterion(
-                test_logit.contiguous().view(-1, vocab_size),
-                Variable(trg_test).view(-1).cuda()
-            )
-            test_loss_sum += test_loss.data[0]
-            del test_loss, test_logit
+                test_logit = model(Variable(src_test).to(device),
+                                   Variable(trg_test).to(device))
+                trg_test = torch.cat((torch.index_select(trg_test, 1, torch.LongTensor(list(range(1, pad_len)))),
+                                 torch.LongTensor(np.zeros([trg_test.shape[0], 1]))), dim=1)
+                test_loss = loss_criterion(
+                    test_logit.contiguous().view(-1, vocab_size),
+                    Variable(trg_test).view(-1).to(device)
+                )
+                test_loss_sum += test_loss.item()
+                del test_loss, test_logit
 
         print("Evaluation Loss", test_loss_sum)
-        es.new_loss(test_loss_sum)
-        if es.if_stop():
+        # es.new_loss(test_loss_sum)
+        if es.step(test_loss_sum):
             print('Start over fitting')
             break
         # Save Model
